@@ -59,6 +59,7 @@
       padding: 20px;
       border-radius: 8px;
       border: 1px solid #eee;
+      margin-bottom: 20px;
     }
     .post img {
       width: 100px;
@@ -78,12 +79,30 @@
       color: #aaa;
       font-size: 14px;
     }
+    .pagination {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .pagination button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      background-color: white;
+      cursor: pointer;
+    }
+    .pagination button.active {
+      background-color: #F74DA5;
+      color: white;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">모두의 편집</div>
-    <button onclick="login()">관리자 로그인</button>
+    <div>
+      <button id="loginBtn" onclick="login()">로그인</button>
+      <button id="logoutBtn" onclick="logout()" style="display:none">로그아웃</button>
+    </div>
   </header>
 
   <div id="adminPanel" style="display: none; text-align: center; margin-top: 10px;">
@@ -114,6 +133,7 @@
 
   <div class="recent">최근 목집글</div>
   <div id="postList"></div>
+  <div class="pagination" id="pagination"></div>
 
   <footer>
     © 2025 모두의 편집 | moduedit<br/>
@@ -123,7 +143,7 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getFirestore, collection, addDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCHuFgJxtDejO8FHhQlB9upzXFy2agr6P4",
@@ -142,25 +162,34 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    const postList = document.getElementById("postList");
+    const pagination = document.getElementById("pagination");
+    const postsRef = collection(db, "modueditPosts");
+    let allPosts = [];
+    let currentPage = 1;
+    const postsPerPage = 5;
+
     onAuthStateChanged(auth, (user) => {
-      if (user && user.uid === adminUID) {
-        document.getElementById("adminPanel").style.display = "block";
+      if (user) {
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "inline";
+        if (user.uid === adminUID) {
+          document.getElementById("adminPanel").style.display = "block";
+        }
       }
     });
 
     window.login = function () {
       signInWithPopup(auth, provider)
-        .then((result) => {
-          alert("로그인 성공");
-        })
-        .catch((error) => {
-          console.error("로그인 실패", error);
-        });
+        .then(() => location.reload())
+        .catch(error => console.error("로그인 실패", error));
     };
 
-    const postList = document.getElementById("postList");
-    const postsRef = collection(db, "modueditPosts");
-    let allPosts = [];
+    window.logout = function () {
+      signOut(auth)
+        .then(() => location.reload())
+        .catch(error => console.error("로그아웃 실패", error));
+    };
 
     async function fetchPosts() {
       const q = query(postsRef, orderBy("createdAt", "desc"));
@@ -202,15 +231,15 @@
     };
 
     function renderPosts(posts) {
+      const start = (currentPage - 1) * postsPerPage;
+      const end = start + postsPerPage;
+      const currentPosts = posts.slice(start, end);
+
       postList.innerHTML = "";
-      posts.forEach(post => {
+      currentPosts.forEach(post => {
         const el = document.createElement("div");
         el.className = "post";
-
-        const date = post.createdAt?.seconds
-          ? new Date(post.createdAt.seconds * 1000).toLocaleDateString('ko-KR')
-          : "";
-
+        const date = post.createdAt?.seconds ? new Date(post.createdAt.seconds * 1000).toLocaleDateString('ko-KR') : "";
         el.innerHTML = `
           <img src="${post.imageURL}" alt="채널 사진" />
           <strong>구분:</strong> ${post.type}<br/>
@@ -221,6 +250,22 @@
         `;
         postList.appendChild(el);
       });
+      renderPagination(posts);
+    }
+
+    function renderPagination(posts) {
+      const totalPages = Math.ceil(posts.length / postsPerPage);
+      pagination.innerHTML = "";
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        if (i === currentPage) btn.classList.add("active");
+        btn.onclick = () => {
+          currentPage = i;
+          renderPosts(allPosts);
+        };
+        pagination.appendChild(btn);
+      }
     }
 
     function clearForm() {
@@ -236,12 +281,9 @@
       buttons.forEach(btn => btn.classList.remove("active"));
       event.target.classList.add("active");
 
-      if (type === '전체') {
-        renderPosts(allPosts);
-      } else {
-        const filtered = allPosts.filter(post => post.type === type);
-        renderPosts(filtered);
-      }
+      const filtered = type === '전체' ? allPosts : allPosts.filter(post => post.type === type);
+      currentPage = 1;
+      renderPosts(filtered);
     };
   </script>
 </body>
