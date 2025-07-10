@@ -125,15 +125,7 @@
 <body>
   <header>
     <div class="logo">모두의 편집</div>
-    <div>
-      <button id="loginBtn" onclick="login()">로그인</button>
-      <button id="logoutBtn" onclick="logout()" style="display:none">로그아웃</button>
-    </div>
   </header>
-
-  <div id="adminPanel" style="display: none; text-align: center; margin-top: 10px;">
-    <strong>관리자 전용 패널입니다.</strong>
-  </div>
 
   <div class="container">
     <h1>편집자를 기다리는 유튜버들이 모이는 곳</h1>
@@ -167,8 +159,9 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import {
+      getFirestore, collection, addDoc, getDocs, query, orderBy, doc, getDoc, setDoc, updateDoc, increment
+    } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCHuFgJxtDejO8FHhQlB9upzXFy2agr6P4",
@@ -180,40 +173,13 @@
       measurementId: "G-RC1H269Z9M"
     };
 
-    const adminUID = "MfKdP0lMC2Tpe7wNgOiAoTKItPN2";
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
     const postList = document.getElementById("postList");
     const postsRef = collection(db, "modueditPosts");
 
     let allPosts = [];
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        document.getElementById("loginBtn").style.display = "none";
-        document.getElementById("logoutBtn").style.display = "inline";
-
-        if (user.uid === adminUID) {
-          document.getElementById("adminPanel").style.display = "block";
-        }
-      }
-    });
-
-    window.login = function () {
-      signInWithPopup(auth, provider)
-        .then(() => location.reload())
-        .catch(error => console.error("로그인 실패", error));
-    };
-
-    window.logout = function () {
-      signOut(auth)
-        .then(() => location.reload())
-        .catch(error => console.error("로그아웃 실패", error));
-    };
 
     async function fetchPosts() {
       const q = query(postsRef, orderBy("createdAt", "desc"));
@@ -223,28 +189,7 @@
     }
 
     fetchPosts();
- import {
-      doc, getDoc, setDoc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    async function trackVisit() {
-      const counterRef = doc(db, "stats", "visits");
-
-      try {
-        const snap = await getDoc(counterRef);
-        if (!snap.exists()) {
-          await setDoc(counterRef, { count: 1 });
-        } else {
-          await updateDoc(counterRef, {
-            count: increment(1)
-          });
-        }
-      } catch (err) {
-        console.error("방문자 수 저장 실패", err);
-      }
-    }
-
-    trackVisit();
     window.registerPost = async function () {
       const type = document.getElementById("type").value;
       const channel = document.getElementById("channel").value;
@@ -321,6 +266,27 @@
         renderPosts(filtered);
       }
     };
+
+    // ✅ 방문자 수 증가
+    async function trackVisit() {
+      const counterRef = doc(db, "stats", "visits");
+
+      try {
+        const snap = await getDoc(counterRef);
+        if (!snap.exists()) {
+          await setDoc(counterRef, { count: 1 });
+        } else {
+          await updateDoc(counterRef, {
+            count: increment(1)
+          });
+        }
+      } catch (err) {
+        console.error("방문자 수 저장 실패", err);
+      }
+    }
+
+    // 실행
+    trackVisit();
   </script>
 </body>
 </html>
