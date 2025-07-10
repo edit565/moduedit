@@ -223,7 +223,28 @@
     }
 
     fetchPosts();
+ import {
+      doc, getDoc, setDoc, updateDoc, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    async function trackVisit() {
+      const counterRef = doc(db, "stats", "visits");
+
+      try {
+        const snap = await getDoc(counterRef);
+        if (!snap.exists()) {
+          await setDoc(counterRef, { count: 1 });
+        } else {
+          await updateDoc(counterRef, {
+            count: increment(1)
+          });
+        }
+      } catch (err) {
+        console.error("방문자 수 저장 실패", err);
+      }
+    }
+
+    trackVisit();
     window.registerPost = async function () {
       const type = document.getElementById("type").value;
       const channel = document.getElementById("channel").value;
