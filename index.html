@@ -120,21 +120,6 @@
       color: #aaa;
       font-size: 14px;
     }
-    .pagination {
-      text-align: center;
-      margin: 20px 0;
-    }
-    .pagination button {
-      margin: 0 5px;
-      padding: 5px 10px;
-      border: 1px solid #ccc;
-      background-color: white;
-      cursor: pointer;
-    }
-    .pagination button.active {
-      background-color: #F74DA5;
-      color: white;
-    }
   </style>
 </head>
 <body>
@@ -174,7 +159,6 @@
 
   <div class="recent">최근 모집글</div>
   <div id="postList"></div>
-  <div class="pagination" id="pagination"></div>
 
   <footer>
     © 2025 모두의 편집 | moduedit<br/>
@@ -204,16 +188,15 @@
     const provider = new GoogleAuthProvider();
 
     const postList = document.getElementById("postList");
-    const pagination = document.getElementById("pagination");
     const postsRef = collection(db, "modueditPosts");
+
     let allPosts = [];
-    let currentPage = 1;
-    const postsPerPage = 5;
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("logoutBtn").style.display = "inline";
+
         if (user.uid === adminUID) {
           document.getElementById("adminPanel").style.display = "block";
         }
@@ -272,17 +255,17 @@
     };
 
     function renderPosts(posts) {
-      const start = (currentPage - 1) * postsPerPage;
-      const end = start + postsPerPage;
-      const currentPosts = posts.slice(start, end);
-
       postList.innerHTML = "";
-      currentPosts.forEach(post => {
+      posts.forEach(post => {
         const el = document.createElement("div");
         el.className = "post";
 
         const date = post.createdAt?.seconds
-          ? new Date(post.createdAt.seconds * 1000).toLocaleDateString('ko-KR')
+          ? new Date(post.createdAt.seconds * 1000).toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
           : "";
 
         el.innerHTML = `
@@ -295,24 +278,6 @@
         `;
         postList.appendChild(el);
       });
-
-      renderPagination(posts);
-    }
-
-    function renderPagination(posts) {
-      const totalPages = Math.ceil(posts.length / postsPerPage);
-      pagination.innerHTML = "";
-
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement("button");
-        btn.textContent = i;
-        if (i === currentPage) btn.classList.add("active");
-        btn.onclick = () => {
-          currentPage = i;
-          renderPosts(posts);
-        };
-        pagination.appendChild(btn);
-      }
     }
 
     function clearForm() {
@@ -328,9 +293,12 @@
       buttons.forEach(btn => btn.classList.remove("active"));
       event.target.classList.add("active");
 
-      const filtered = type === '전체' ? allPosts : allPosts.filter(post => post.type === type);
-      currentPage = 1;
-      renderPosts(filtered);
+      if (type === '전체') {
+        renderPosts(allPosts);
+      } else {
+        const filtered = allPosts.filter(post => post.type === type);
+        renderPosts(filtered);
+      }
     };
   </script>
 </body>
