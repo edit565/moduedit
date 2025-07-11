@@ -149,6 +149,17 @@
     <button onclick="filterPosts('썸네일러')">썸네일러</button>
   </div>
 
+  <!-- ✅ 검색창 추가 -->
+  <div style="text-align:center; margin: 10px 0;">
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="검색어 입력"
+    style="padding: 6px 10px; width: 50%; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;"
+  />
+</div>
+
+
   <div class="recent">최근 모집글</div>
   <div id="postList"></div>
 
@@ -267,6 +278,19 @@
       }
     };
 
+    // ✅ 검색 필터링
+    document.getElementById("searchInput").addEventListener("input", function () {
+      const keyword = this.value.trim().toLowerCase();
+
+      const filtered = allPosts.filter(post =>
+        post.channel.toLowerCase().includes(keyword) ||
+        post.subs.toLowerCase().includes(keyword) ||
+        post.type.toLowerCase().includes(keyword)
+      );
+
+      renderPosts(filtered);
+    });
+
     // ✅ 방문자 수 증가
     async function trackVisit() {
       const counterRef = doc(db, "stats", "visits");
@@ -285,7 +309,6 @@
       }
     }
 
-    // 실행
     trackVisit();
   </script>
 </body>
